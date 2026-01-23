@@ -3,82 +3,109 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.2</version>
-        <relativePath/>
+        <version>3.3.5</version> <!-- Latest stable series in early 2026 -->
+        <relativePath/> <!-- lookup from repo -->
     </parent>
 
     <groupId>com.sign</groupId>
     <artifactId>sign</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <name>pdf-signer-dss</name>
+    <description>PDF Signer with EU DSS and UniTool</description>
 
     <properties>
         <java.version>21</java.version>
-        <dss.version>5.13.1</dss.version>
+        <dss.version>6.4.RC1</dss.version> <!-- Latest as of Dec 2025 / Jan 2026 -->
+        <pdfbox.version>3.0.3</pdfbox.version>
     </properties>
 
+    <!-- IMPORTANT: BOM goes here to manage versions -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+                <artifactId>dss-bom</artifactId>
+                <version>${dss.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <!-- Spring Boot -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
+        <!-- EU DSS modules (versions managed by BOM) -->
         <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>2.3.1</version>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-pades</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.glassfish.jaxb</groupId>
-            <artifactId>jaxb-runtime</artifactId>
-            <version>2.3.1</version>
-        </dependency>
-        <dependency>
-            <groupId>javax.activation</groupId>
-            <artifactId>javax.activation-api</artifactId>
-            <version>1.2.0</version>
-        </dependency>
-
         <dependency>
             <groupId>eu.europa.ec.joinup.sd-dss</groupId>
             <artifactId>dss-pades-pdfbox</artifactId>
-            <version>${dss.version}</version>
         </dependency>
         <dependency>
             <groupId>eu.europa.ec.joinup.sd-dss</groupId>
-            <artifactId>dss-service</artifactId>
-            <version>${dss.version}</version>
+            <artifactId>dss-spi</artifactId>
         </dependency>
         <dependency>
             <groupId>eu.europa.ec.joinup.sd-dss</groupId>
-            <artifactId>dss-utils-google-guava</artifactId>
-            <version>${dss.version}</version>
+            <artifactId>dss-utils-apache-commons</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-cms-object</artifactId>
         </dependency>
 
+        <!-- PDFBox explicit (compatible with DSS) -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
+
+        <!-- Commons IO for streams -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.17.0</version>
+        </dependency>
+
+        <!-- BouncyCastle (required by DSS) -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.77</version>
+            <version>1.78.1</version>
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk18on</artifactId>
-            <version>1.77</version>
+            <version>1.78.1</version>
         </dependency>
+
     </dependencies>
 
     <repositories>
         <repository>
             <id>cefdigital</id>
-            <name>CefDigital Repository</name>
+            <name>CEF Digital Repository</name>
             <url>https://ec.europa.eu/digital-building-blocks/artifact/content/repositories/esignaturedss/</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
         </repository>
     </repositories>
 
@@ -87,6 +114,18 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.sign.YourMainClassHere</mainClass> <!-- ← replace with your @SpringBootApplication class name, e.g. SignApplication -->
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>
