@@ -115,7 +115,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.sign.YourMainClassHere</mainClass> <!-- ← replace with your @SpringBootApplication class name, e.g. SignApplication -->
+                    <mainClass>com.sign.SignApplication</mainClass>
                 </configuration>
             </plugin>
 
