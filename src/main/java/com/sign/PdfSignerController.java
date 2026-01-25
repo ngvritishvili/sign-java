@@ -3,8 +3,6 @@ package com.sign;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.io.IOUtils;
 import org.apache.pdfbox.Loader;
-import org.apache.pdfbox.cos.COSArray;
-import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.ExternalSigningSupport;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
@@ -15,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.*;
 
@@ -24,9 +21,6 @@ public class PdfSignerController {
 
     private static final Logger log = LoggerFactory.getLogger(PdfSignerController.class);
 
-    // ---------------------------
-    // PREPARE
-    // ---------------------------
     @PostMapping("/prepare")
     public ResponseEntity<?> prepare(@RequestBody PrepareRequest req) {
         try {
@@ -73,10 +67,6 @@ public class PdfSignerController {
         }
     }
 
-
-    // ---------------------------
-    // FINALIZE
-    // ---------------------------
     @PostMapping("/finalize")
     public ResponseEntity<?> finalize(@RequestBody FinalizeRequest req) {
         try {
@@ -127,9 +117,6 @@ public class PdfSignerController {
 
 
 
-    // ---------------------------
-    // UTILITIES
-    // ---------------------------
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) sb.append(String.format("%02x", b));
@@ -145,9 +132,6 @@ public class PdfSignerController {
         return data;
     }
 
-    // ---------------------------
-    // DTOs
-    // ---------------------------
     public static class PrepareRequest {
         @JsonProperty("source_pdf_b64")
         private String source_pdf_b64;
@@ -168,117 +152,3 @@ public class PdfSignerController {
         public void setCms_hex(String v) { this.cms_hex = v; }
     }
 }
-
-
-//@PostMapping("/finalize")
-//public ResponseEntity<?> finalize(@RequestBody FinalizeRequest req) {
-//    System.out.println("=== ENTERED /finalize ===");
-//    System.out.println("Request received: " + req);
-//
-//    try {
-//        // 1. Validate input
-//        if (req.getPrepared_pdf_b64() == null || req.getPrepared_pdf_b64().trim().isEmpty()) {
-//            throw new IllegalArgumentException("prepared_pdf_b64 is required and cannot be empty");
-//        }
-//
-//        String cmsInput = req.getCms_hex();
-//        if (cmsInput == null || cmsInput.trim().isEmpty()) {
-//            throw new IllegalArgumentException("cms_hex is required and cannot be empty");
-//        }
-//
-//        System.out.println("CMS input length: " + cmsInput.length() + " chars");
-//        System.out.println("CMS starts with: " + cmsInput.substring(0, Math.min(60, cmsInput.length())) + "...");
-//
-//        // 2. Decode prepared PDF
-//        byte[] preparedPdfBytes;
-//        try {
-//            preparedPdfBytes = Base64.getDecoder().decode(req.getPrepared_pdf_b64().trim());
-//            System.out.println("Prepared PDF decoded successfully. Size: " + preparedPdfBytes.length + " bytes");
-//        } catch (IllegalArgumentException e) {
-//            throw new IllegalArgumentException("Invalid base64 in prepared_pdf_b64: " + e.getMessage());
-//        }
-//
-//        // 3. Convert CMS hex → bytes
-//        byte[] cmsBytes;
-//        try {
-//            if (cmsInput.length() > 100 && cmsInput.matches("^[0-9a-fA-F]+$")) {
-//                System.out.println("Detected HEX format for CMS");
-//                cmsBytes = hexStringToByteArray(cmsInput);
-//            } else {
-//                System.out.println("Treating CMS as base64");
-//                cmsBytes = Base64.getDecoder().decode(cmsInput.trim());
-//            }
-//            System.out.println("CMS bytes size: " + cmsBytes.length + " bytes");
-//        } catch (Exception e) {
-//            throw new IllegalArgumentException("Failed to decode CMS (hex/base64): " + e.getMessage());
-//        }
-//
-//        // 4. DEBUG: Save received prepared PDF
-//        try (java.io.FileOutputStream fos = new java.io.FileOutputStream("debug_received_prepared.pdf")) {
-//            fos.write(preparedPdfBytes);
-//            System.out.println("Saved received prepared PDF → debug_received_prepared.pdf");
-//        } catch (Exception e) {
-//            System.err.println("Failed to save debug_received_prepared.pdf: " + e.getMessage());
-//        }
-//
-//        // 5. Load PDF and inspect signatures
-//        try (PDDocument pdDocument = PDDocument.load(preparedPdfBytes)) {
-//            System.out.println("PDF loaded successfully. Number of pages: " + pdDocument.getNumberOfPages());
-//
-//            List<PDSignature> signatures = pdDocument.getSignatureDictionaries();
-//            System.out.println("Found " + signatures.size() + " signature placeholder(s)");
-//
-//            if (signatures.isEmpty()) {
-//                throw new IllegalStateException("No signature placeholder found in prepared PDF – signing will be invisible/invalid");
-//            }
-//
-//            // Take the last one (most recent placeholder)
-//            PDSignature signature = signatures.get(signatures.size() - 1);
-//            System.out.println("Using signature placeholder #" + (signatures.size()));
-//            System.out.println("  - Name:   " + signature.getName());
-//            System.out.println("  - Reason: " + signature.getReason());
-//            System.out.println("  - Location: " + signature.getLocation());
-//            System.out.println("  - Filter/SubFilter: " + signature.getFilter() + " / " + signature.getSubFilter());
-//            System.out.println("  - ByteRange exists: " + (signature.getByteRange() != null));
-//            if (signature.getByteRange() != null) {
-//                System.out.println("  - ByteRange: " + java.util.Arrays.toString(signature.getByteRange()));
-//            }
-//
-//            // 6. Embed CMS
-//            signature.setContents(cmsBytes);
-//            System.out.println("CMS contents set successfully (size: " + cmsBytes.length + " bytes)");
-//
-//            // 7. Incremental save
-//            ByteArrayOutputStream signedBaos = new ByteArrayOutputStream();
-//            pdDocument.saveIncremental(signedBaos);
-//            byte[] signedPdfBytes = signedBaos.toByteArray();
-//
-//            System.out.println("Incremental save completed. Final signed PDF size: " + signedPdfBytes.length + " bytes");
-//
-//            // 8. DEBUG: Save final PDF
-//            try (java.io.FileOutputStream fos = new java.io.FileOutputStream("debug_final_signed.pdf")) {
-//                fos.write(signedPdfBytes);
-//                System.out.println("Saved final signed PDF → debug_final_signed.pdf");
-//            } catch (Exception e) {
-//                System.err.println("Failed to save debug_final_signed.pdf: " + e.getMessage());
-//            }
-//
-//            // 9. Return response
-//            Map<String, String> response = new HashMap<>();
-//            response.put("signedPdfBase64", Base64.getEncoder().encodeToString(signedPdfBytes));
-//
-//            System.out.println("=== FINALIZE SUCCESS ===");
-//            return ResponseEntity.ok(response);
-//
-//        } // auto-closes pdDocument
-//
-//    } catch (Exception e) {
-//        System.err.println("Finalize FAILED: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-//        e.printStackTrace();
-//        log.error("Finalize error", e);
-//        return ResponseEntity.status(500).body(Map.of(
-//                "error", e.getMessage(),
-//                "exception", e.getClass().getSimpleName()
-//        ));
-//    }
-//}
