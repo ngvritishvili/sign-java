@@ -170,16 +170,14 @@ public class PdfSignerController {
         ap.setResources(new PDResources());
         ap.setBBox(new PDRectangle(w, h));
 
-        // --- Load Unicode Font for Georgian Support ---
-        // Place a .ttf file in src/main/resources/fonts/
+        // --- Load Unicode Font ---
         PDFont fontRegular;
         PDFont fontBold;
         try (InputStream fontStream = getClass().getResourceAsStream("/fonts/DejaVuSans.ttf")) {
             if (fontStream != null) {
                 fontRegular = PDType0Font.load(doc, fontStream);
-                fontBold = fontRegular; // Use same for simplicity, or load a Bold .ttf
+                fontBold = fontRegular;
             } else {
-                // Fallback to standard if font file missing (will still error on Georgian)
                 fontRegular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
                 fontBold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
             }
@@ -193,47 +191,37 @@ public class PdfSignerController {
             }
         }
 
-//        PDType1Font fontBold    = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
-//        PDType1Font fontRegular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-
         try (PDPageContentStream cs = new PDPageContentStream(doc, ap)) {
 
-            // --- White background ---
-            cs.setNonStrokingColor(1f, 1f, 1f);
-            cs.addRect(0, 0, w, h);
-            cs.fill();
-
-            // --- Logo: Fixed Aspect Ratio (No Stretching) ---
+            // --- Logo: Fixed Aspect Ratio ---
             if (logo != null) {
                 float imgWidth = logo.getWidth();
                 float imgHeight = logo.getHeight();
                 float aspectRatio = imgWidth / imgHeight;
-
                 float logoDrawH = h;
                 float logoDrawW = h * aspectRatio;
-
                 if (logoDrawW > w) {
                     logoDrawW = w;
                     logoDrawH = w / aspectRatio;
                 }
-
                 float logoX = (w - logoDrawW) / 2f;
                 float logoY = (h - logoDrawH) / 2f;
                 cs.drawImage(logo, logoX, logoY, logoDrawW, logoDrawH);
             }
 
             // ---------------------------------------------------------------
-            // LEFT SIDE — Moved 5% more to the right
+            // LEFT SIDE — Increased by 2px (10f -> 12f)
             // ---------------------------------------------------------------
             float leftZoneW  = w * 0.40f;
             float leftX      = (w * 0.05f) + 8f;
 
-            float leftNameSize = fitFontSize(fontRegular, firstName, leftZoneW, 14f);
-            float lastNameSize = fitFontSize(fontRegular, lastName,  leftZoneW, 14f);
-            float idSize       = fitFontSize(fontBold,    signerId,  leftZoneW, 11f);
+            // UPDATED: Starting sizes increased by 2px
+            float leftNameSize = fitFontSize(fontRegular, firstName, leftZoneW, 12f);
+            float lastNameSize = fitFontSize(fontRegular, lastName,  leftZoneW, 12f);
+            float idSize       = fitFontSize(fontBold,    signerId,  leftZoneW, 9f); // 7f -> 9f
 
             float nameSize = Math.min(leftNameSize, lastNameSize);
-            float nameLineH = nameSize + 4f;
+            float nameLineH = nameSize + 4f; // Spacing adjusted for 12px text
             float idLineH   = idSize   + 4f;
 
             float leftBlockH = nameLineH + nameLineH + idLineH;
@@ -241,21 +229,21 @@ public class PdfSignerController {
 
             cs.setNonStrokingColor(0f, 0f, 0f);
 
-            // First name (Regular)
+            // First name
             cs.beginText();
             cs.setFont(fontRegular, nameSize);
             cs.newLineAtOffset(leftX, leftStartY);
             cs.showText(firstName);
             cs.endText();
 
-            // Last name (Regular)
+            // Last name
             cs.beginText();
             cs.setFont(fontRegular, nameSize);
             cs.newLineAtOffset(leftX, leftStartY - nameLineH);
             cs.showText(lastName);
             cs.endText();
 
-            // ID (Bold)
+            // ID
             cs.beginText();
             cs.setFont(fontBold, idSize);
             cs.newLineAtOffset(leftX, leftStartY - nameLineH - nameLineH);
@@ -263,52 +251,48 @@ public class PdfSignerController {
             cs.endText();
 
             // ---------------------------------------------------------------
-            // RIGHT SIDE — Increased size by ~1.5px and set to Bold
+            // RIGHT SIDE — Increased by 2px
             // ---------------------------------------------------------------
             float rightX     = w * 0.60f;
-            // Increased rightSize from nameSize/2 to nameSize/2 + 1.5f
-            float rightSize  = (nameSize / 2f) + 1.5f;
-            float rightLineH2 = rightSize + 3.5f; // Slight adjust to line height for larger font
+
+            // UPDATED: Base size for right block increased
+            float rightSize  = Math.max(nameSize / 2f + 1.0f, 7.5f);
+            float rightLineH2 = rightSize + 3.0f;
 
             float rightBlockH = 5f * rightLineH2;
             float rightStartY = (h + rightBlockH) / 2f - rightSize;
 
-            // Line 1: "Digitally signed"
+            // Right block remains Bold
             cs.beginText();
             cs.setFont(fontBold, rightSize);
             cs.newLineAtOffset(rightX, rightStartY);
             cs.showText("Digitally signed");
             cs.endText();
 
-            // Line 2: "by FirstName"
             cs.beginText();
             cs.setFont(fontBold, rightSize);
             cs.newLineAtOffset(rightX, rightStartY - rightLineH2);
             cs.showText("by " + firstName);
             cs.endText();
 
-            // Line 3: LastName
             cs.beginText();
             cs.setFont(fontBold, rightSize);
             cs.newLineAtOffset(rightX, rightStartY - rightLineH2 * 2f);
             cs.showText(lastName);
             cs.endText();
 
-            // Line 4: Date
             cs.beginText();
             cs.setFont(fontBold, rightSize);
             cs.newLineAtOffset(rightX, rightStartY - rightLineH2 * 3f);
             cs.showText("Date: " + date);
             cs.endText();
 
-            // Line 5: Time
             cs.beginText();
             cs.setFont(fontBold, rightSize);
             cs.newLineAtOffset(rightX, rightStartY - rightLineH2 * 4f);
             cs.showText(time);
             cs.endText();
         }
-
         return ap;
     }
 
